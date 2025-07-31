@@ -48,19 +48,8 @@ export async function POST(request: NextRequest) {
 
 async function analyzeCompetitorStore(storeUrl: string): Promise<CompetitorAnalysis> {
   try {
-    // Navigate to competitor store using Puppeteer MCP
-    const response = await fetch('/api/mcp/puppeteer', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'navigate',
-        url: storeUrl
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to navigate to store');
-    }
+    // For MVP, we'll skip the navigation step and go directly to data extraction
+    console.log(`Analyzing store: ${storeUrl}`);
 
     // Extract store data
     const storeData = await extractStoreData(storeUrl);
@@ -96,7 +85,11 @@ async function analyzeCompetitorStore(storeUrl: string): Promise<CompetitorAnaly
 async function extractStoreData(storeUrl: string) {
   try {
     // Use Puppeteer MCP to extract comprehensive store data
-    const extractResponse = await fetch('/api/mcp/puppeteer', {
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : 'https://yourapp.vercel.app'; // Replace with your actual domain
+    
+    const extractResponse = await fetch(`${baseUrl}/api/mcp/puppeteer`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -325,7 +318,11 @@ function identifyOpportunities(storeData: any, metrics: any): string[] {
 async function storeCompetitorIntelligence(analysis: CompetitorAnalysis) {
   try {
     // Store analysis in Memory MCP for future reference
-    const memoryResponse = await fetch('/api/mcp/memory', {
+    const baseUrl = process.env.NODE_ENV === 'development' 
+      ? 'http://localhost:3000' 
+      : 'https://yourapp.vercel.app'; // Replace with your actual domain
+    
+    const memoryResponse = await fetch(`${baseUrl}/api/mcp/memory`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -362,10 +359,21 @@ async function storeCompetitorIntelligence(analysis: CompetitorAnalysis) {
 function isValidShopifyUrl(url: string): boolean {
   try {
     const urlObj = new URL(url);
-    return urlObj.hostname.includes('myshopify.com') || 
-           urlObj.pathname !== '/' || 
-           url.includes('.com') || 
-           url.includes('.store');
+    
+    // Check for .myshopify.com domains (official Shopify stores)
+    if (urlObj.hostname.includes('myshopify.com')) {
+      return true;
+    }
+    
+    // Check for custom domains that might be Shopify stores
+    if (urlObj.hostname.includes('.com') || 
+        urlObj.hostname.includes('.store') || 
+        urlObj.hostname.includes('.shop') ||
+        urlObj.hostname.includes('.co')) {
+      return true;
+    }
+    
+    return false;
   } catch {
     return false;
   }
